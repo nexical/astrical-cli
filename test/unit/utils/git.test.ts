@@ -1,15 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { runCommand } from '../../../src/utils/git.js';
-import { logger } from '../../../src/utils/logger.js';
-import * as cp from 'node:child_process';
+import * as git from '../../../src/utils/git.js';
+import * as shell from '../../../src/utils/shell.js';
 
-vi.mock('../../../src/utils/logger.js');
-// Mock the whole module
-vi.mock('node:child_process', async () => {
-    return {
-        exec: vi.fn(),
-    };
-});
+vi.mock('../../../src/utils/shell.js');
 
 describe('git utils', () => {
     beforeEach(() => {
@@ -20,61 +13,55 @@ describe('git utils', () => {
         vi.resetAllMocks();
     });
 
-    it('should execute command successfully', async () => {
-        const mockExec = vi.mocked(cp.exec);
-        mockExec.mockImplementation(((cmd: string, options: any, cb: any) => {
-            // Support both (cmd, cb) and (cmd, opts, cb)
-            const callback = cb || options;
-            callback(null, 'stdout output', '');
-            return {} as any;
-        }) as any);
+    it('should clone repository', async () => {
+        await git.clone('http://repo.git', 'dest', true);
+        expect(shell.runCommand).toHaveBeenCalledWith(
+            'git clone --recursive http://repo.git .',
+            'dest'
+        );
 
-        await runCommand('git status');
-
-        expect(mockExec).toHaveBeenCalledWith('git status', expect.anything(), expect.anything());
+        await git.clone('http://repo.git', 'dest', false);
+        expect(shell.runCommand).toHaveBeenCalledWith(
+            'git clone http://repo.git .',
+            'dest'
+        );
     });
 
-    it('should pass cwd to exec', async () => {
-        const mockExec = vi.mocked(cp.exec);
-        mockExec.mockImplementation(((cmd: string, options: any, cb: any) => {
-            const callback = cb || options;
-            callback(null, 'stdout', '');
-            return {} as any;
-        }) as any);
-
-        await runCommand('git status', '/tmp');
-
-        expect(mockExec).toHaveBeenCalledWith('git status', expect.objectContaining({ cwd: '/tmp' }), expect.anything());
+    it('should update submodules', async () => {
+        await git.updateSubmodules('cwd');
+        expect(shell.runCommand).toHaveBeenCalledWith(
+            expect.stringContaining('git submodule foreach'),
+            'cwd'
+        );
     });
 
-    it('should handle execution errors', async () => {
-        const error: any = new Error('Original Error');
-        error.code = 127;
-
-        const mockExec = vi.mocked(cp.exec);
-        mockExec.mockImplementation(((cmd: string, options: any, cb: any) => {
-            const callback = cb || options;
-            callback(error, '', 'stderr output');
-            return {} as any;
-        }) as any);
-
-        await expect(runCommand('invalid-command')).rejects.toThrow('Command failed: invalid-command');
-
-        expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('Command failed'));
+    it('should checkout orphan branch', async () => {
+        await git.checkoutOrphan('branch', 'cwd');
+        expect(shell.runCommand).toHaveBeenCalledWith('git checkout --orphan branch', 'cwd');
     });
 
-    it('should log stderr if available on error', async () => {
-        const error: any = new Error('Git Error');
-        error.stderr = 'Some serious git error';
+    it('should add all files', async () => {
+        await git.addAll('cwd');
+        expect(shell.runCommand).toHaveBeenCalledWith('git add -A', 'cwd');
+    });
 
-        const mockExec = vi.mocked(cp.exec);
-        mockExec.mockImplementation(((cmd: string, options: any, cb: any) => {
-            const callback = cb || options;
-            callback(error, '', 'stderr output');
-            return {} as any;
-        }) as any);
+    it('should commit', async () => {
+        await git.commit('msg', 'cwd');
+        expect(shell.runCommand).toHaveBeenCalledWith('git commit -m "msg"', 'cwd');
+    });
 
-        await expect(runCommand('git fail')).rejects.toThrow();
-        expect(logger.error).toHaveBeenCalledWith('Some serious git error');
+    it('should delete branch', async () => {
+        await git.deleteBranch('branch', 'cwd');
+        expect(shell.runCommand).toHaveBeenCalledWith('git branch -D branch', 'cwd');
+    });
+
+    it('should rename branch', async () => {
+        await git.renameBranch('branch', 'cwd');
+        expect(shell.runCommand).toHaveBeenCalledWith('git branch -m branch', 'cwd');
+    });
+
+    it('should remove remote', async () => {
+        await git.removeRemote('origin', 'cwd');
+        expect(shell.runCommand).toHaveBeenCalledWith('git remote remove origin', 'cwd');
     });
 });

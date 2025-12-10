@@ -1,6 +1,7 @@
 import { BaseCommand } from '../core/BaseCommand.js';
 import { CommandDefinition } from '../core/CommandInterface.js';
-import { runCommand } from '../utils/git.js';
+import * as git from '../utils/git.js';
+import { runCommand } from '../utils/shell.js';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -45,26 +46,26 @@ export default class InitCommand extends BaseCommand {
 
         try {
             this.info('Cloning starter repository...');
-            await runCommand(`git clone --recursive ${repoUrl} .`, targetPath);
+            await git.clone(repoUrl, targetPath, true);
 
             this.info('Updating submodules...');
-            await runCommand('git submodule foreach --recursive "git checkout main && git pull origin main"', targetPath);
+            await git.updateSubmodules(targetPath);
 
             this.info('Installing dependencies...');
             await runCommand('npm install', targetPath);
 
             this.info('Re-initializing git history...');
             // Orphan branch strategy to wipe history but keep files
-            await runCommand('git checkout --orphan new-main', targetPath);
-            await runCommand('git add -A', targetPath);
-            await runCommand('git commit -m "Initial commit"', targetPath);
+            await git.checkoutOrphan('new-main', targetPath);
+            await git.addAll(targetPath);
+            await git.commit('Initial commit', targetPath);
 
             // Delete old main/master (try both common names, catch error if one fails)
-            try { await runCommand('git branch -D main', targetPath); } catch { }
-            try { await runCommand('git branch -D master', targetPath); } catch { }
+            try { await git.deleteBranch('main', targetPath); } catch { }
+            try { await git.deleteBranch('master', targetPath); } catch { }
 
-            await runCommand('git branch -m main', targetPath);
-            await runCommand('git remote remove origin', targetPath);
+            await git.renameBranch('main', targetPath);
+            await git.removeRemote('origin', targetPath);
 
             this.success(`Project initialized successfully in ${directory}!`);
             this.info(`\nTo get started:\n  cd ${directory}\n  npm run dev`);
