@@ -96,6 +96,22 @@ describe('InitCommand', () => {
         expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('not empty'));
     });
 
+    it('should proceed if directory exists but is empty', async () => {
+        vi.mocked(fs.existsSync).mockReturnValue(true);
+        vi.mocked(fs.readdirSync).mockReturnValue([]);
+
+        // Mock process.exit to ensure it's NOT called
+        // We can check that by ensuring run resolves successfully (or throws a differnet error later if git mock isn't set up for this specific flow, but we can reuse default git mocks)
+
+        await command.run({ directory: 'empty-dir', repo: 'foo' });
+
+        expect(fs.mkdirSync).not.toHaveBeenCalled(); // Should assume dir exists
+        expect(gitUtils.runCommand).toHaveBeenCalledWith(
+            expect.stringContaining('git clone'),
+            expect.stringContaining('empty-dir')
+        );
+    });
+
     it('should handle git errors gracefully', async () => {
         vi.mocked(gitUtils.runCommand).mockRejectedValueOnce(new Error('Git fail'));
 
