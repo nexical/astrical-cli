@@ -54,7 +54,8 @@ describe('HelpCommand', () => {
 
         // Mock commands for global list
         mockCli.getCommands.mockReturnValue([
-            { command: 'init', class: { description: 'Init desc' } }
+            { command: 'init', class: { description: 'Init desc' } },
+            { command: 'undocumented', class: { description: undefined } } // No desc
         ]);
 
         await cmd.run({ command: [] }); // No args
@@ -64,6 +65,7 @@ describe('HelpCommand', () => {
         expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Commands:'));
         expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('init'));
         expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Init desc'));
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('undocumented'));
         expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('--help'));
     });
 
@@ -92,7 +94,8 @@ describe('HelpCommand', () => {
                     description: 'Initialize project',
                     args: {
                         args: [
-                            { name: 'name', description: 'Project Name', required: true }
+                            { name: 'name', description: 'Project Name', required: true },
+                            { name: 'optional', description: undefined, required: false }
                         ]
                     }
                 }
@@ -123,6 +126,7 @@ describe('HelpCommand', () => {
         expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Arguments:'));
         expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Project Name'));
         expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('(required)'));
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('optional'));
         // Options
         expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('--force'));
     });

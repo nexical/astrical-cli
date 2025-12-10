@@ -174,4 +174,17 @@ describe('CommandLoader', () => {
         const commands = await loader.load(rootDir);
         expect(commands).toHaveLength(0);
     });
+
+    it('should skip index.ts at root level', async () => {
+        const rootDir = '/commands';
+        (fs.existsSync as any).mockReturnValue(true);
+        (fs.readdirSync as any).mockReturnValue(['index.ts']);
+        (fs.statSync as any).mockReturnValue({ isDirectory: () => false });
+
+        class RootIndexCommand extends BaseCommand { async run() { } }
+        mockImporter.mockResolvedValue({ default: RootIndexCommand });
+
+        const commands = await loader.load(rootDir);
+        expect(commands).toHaveLength(0);
+    });
 });

@@ -331,4 +331,28 @@ describe('CLI', () => {
 
         expect(cli.getCommands()).toEqual([]);
     });
+
+    it('should register optional variadic command', async () => {
+        class OpVarCommand extends BaseCommand {
+            static args = {
+                args: [{ name: 'files...', required: false }],
+                options: [{ name: '--verbose', description: 'Verbose' }] // No default
+            };
+            async run() { }
+        }
+
+        mockLoad.mockResolvedValue([
+            { command: 'opvar', class: OpVarCommand, instance: new OpVarCommand() }
+        ]);
+        (fs.existsSync as any).mockReturnValue(true);
+
+        const cli = new CLI();
+        await cli.start();
+
+        expect(mockCac.command).toHaveBeenCalledWith(
+            expect.stringContaining('opvar [...files]'),
+            expect.anything()
+        );
+        expect(mockCommand.option).toHaveBeenCalledWith('--verbose', 'Verbose', { default: undefined });
+    });
 });
