@@ -27,7 +27,9 @@ export default class PreviewCommand extends BaseCommand {
 
         this.info('Starting preview server...');
 
-        const child = spawn('npx', ['astro', 'preview'], {
+        const astroBin = path.join(this.projectRoot, 'node_modules', '.bin', 'astro');
+
+        const child = spawn(astroBin, ['preview'], {
             cwd: siteDir,
             stdio: 'inherit',
             env: {
@@ -52,7 +54,7 @@ export default class PreviewCommand extends BaseCommand {
         await new Promise<void>((resolve) => {
             child.on('close', (code) => {
                 if (code !== 0) {
-                    // Just exit
+                    // exit
                 }
                 resolve();
             });

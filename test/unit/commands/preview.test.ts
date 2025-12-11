@@ -53,9 +53,13 @@ describe('PreviewCommand', () => {
 
         await command.run();
 
-        expect(cp.spawn).toHaveBeenCalledWith('npx', ['astro', 'preview'], expect.objectContaining({
-            cwd: expect.stringContaining('_site')
-        }));
+        expect(cp.spawn).toHaveBeenCalledWith(
+            expect.stringContaining('astro'),
+            ['preview'],
+            expect.objectContaining({
+                cwd: expect.stringContaining('_site')
+            })
+        );
     });
 
     it('should error if dist does not exist', async () => {

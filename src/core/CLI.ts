@@ -32,9 +32,9 @@ export class CLI {
         // because tsup might put index.js at root of dist, and commands in dist/commands
 
         const possibleDirs = [
-            path.resolve(__dirname, 'commands'), // dist/commands or src/commands if unbundled
-            path.resolve(__dirname, '../commands'), // common when file is nested in core/
-            path.resolve(__dirname, '../src/commands') // dev fallback potentially
+            path.resolve(__dirname, 'commands'),
+            path.resolve(__dirname, '../commands'),
+            path.resolve(__dirname, '../src/commands')
         ];
 
         let commandsDir = '';
@@ -52,76 +52,108 @@ export class CLI {
 
         this.loadedCommands = await this.loader.load(commandsDir);
 
+        // Group commands by root command name
+        const commandGroups: Record<string, any[]> = {};
         for (const cmd of this.loadedCommands) {
-            const CommandClass = cmd.class;
-
-            // Construct the syntax string for CAC
-            // e.g. "create <name> [options]"
-            let commandName = cmd.command;
-
-            // Append args definition from static args
-            // This is a simplified transformation.
-            // BaseCommand.args = { args: [{name: 'name', required: true}] }
-            const argsDef = CommandClass.args || {};
-            if (argsDef.args) {
-                argsDef.args.forEach((arg: any) => {
-                    const isVariadic = arg.name.endsWith('...');
-                    const cleanName = isVariadic ? arg.name.slice(0, -3) : arg.name;
-
-                    if (arg.required) {
-                        commandName += isVariadic ? ` <...${cleanName}>` : ` <${cleanName}>`;
-                    } else {
-                        commandName += isVariadic ? ` [...${cleanName}]` : ` [${cleanName}]`;
-                    }
-                });
-            }
-
-            const cacCommand = this.cli.command(commandName, CommandClass.description || '');
-
-            // Register options
-            if (argsDef.options) {
-                argsDef.options.forEach((opt: any) => {
-                    // e.g. '--dry-run'
-                    cacCommand.option(opt.name, opt.description, { default: opt.default });
-                });
-            }
-
-            // Register default global options to every command
-            cacCommand.option('--root-dir <path>', 'Override project root');
-            cacCommand.option('--debug', 'Enable debug mode');
-
-            cacCommand.action(async (...args: any[]) => {
-                // Last arg is always the options object in CAC
-                const options = args.pop();
-
-                // Map positional args to names
-                const positionalArgs = args;
-                if (argsDef.args) {
-                    argsDef.args.forEach((arg: any, index: number) => {
-                        const isVariadic = arg.name.endsWith('...');
-                        const name = isVariadic ? arg.name.slice(0, -3) : arg.name;
-
-                        if (index < positionalArgs.length) {
-                            options[name] = positionalArgs[index];
-                        }
-                    });
-                }
-
-                try {
-                    const instance = new CommandClass(options);
-                    instance.setCli(this); // Inject CLI context
-                    await instance.init();
-                    await instance.run(options);
-                } catch (e: any) {
-                    console.error(pc.red(e.message));
-                    if (options.debug) {
-                        console.error(e.stack);
-                    }
-                    process.exit(1);
-                }
-            });
+            const root = cmd.command.split(' ')[0];
+            if (!commandGroups[root]) commandGroups[root] = [];
+            commandGroups[root].push(cmd);
         }
 
+        for (const [root, cmds] of Object.entries(commandGroups)) {
+            // Case 1: Single command, no subcommands (e.g. 'init')
+            if (cmds.length === 1 && cmds[0].command === root) {
+                const cmd = cmds[0];
+                const CommandClass = cmd.class;
+                // Original logic for single command
+                let commandName = cmd.command;
+                const argsDef = CommandClass.args || {};
+                if (argsDef.args) {
+                    argsDef.args.forEach((arg: any) => {
+                        const isVariadic = arg.name.endsWith('...');
+                        const cleanName = isVariadic ? arg.name.slice(0, -3) : arg.name;
+                        if (arg.required) commandName += isVariadic ? ` <...${cleanName}>` : ` <${cleanName}>`;
+                        else commandName += isVariadic ? ` [...${cleanName}]` : ` [${cleanName}]`;
+                    });
+                }
+                const cacCommand = this.cli.command(commandName, CommandClass.description || '');
+
+                // Register options
+                if (argsDef.options) {
+                    argsDef.options.forEach((opt: any) => {
+                        cacCommand.option(opt.name, opt.description, { default: opt.default });
+                    });
+                }
+                this.registerGlobalOptions(cacCommand);
+
+                cacCommand.action(async (...args: any[]) => {
+                    const options = args.pop();
+                    const positionalArgs = args;
+                    if (argsDef.args) {
+                        argsDef.args.forEach((arg: any, index: number) => {
+                            const isVariadic = arg.name.endsWith('...');
+                            const name = isVariadic ? arg.name.slice(0, -3) : arg.name;
+                            if (index < positionalArgs.length) options[name] = positionalArgs[index];
+                        });
+                    }
+                    await this.runCommand(CommandClass, options);
+                });
+            } else {
+                // Case 2: Command with subcommands (e.g. 'module add')
+                // Register 'module <subcommand>' catch-all
+                const commandName = `${root} <subcommand> [...args]`;
+                const cacCommand = this.cli.command(commandName, `Manage ${root} commands`);
+
+                cacCommand.allowUnknownOptions(); // Pass options to subcommand
+                this.registerGlobalOptions(cacCommand);
+
+                cacCommand.action(async (subcommand: string, ...args: any[]) => {
+                    const options = args.pop(); // last is options
+
+                    // Find matching command
+                    // Match against "root subcommand"
+                    const fullCommandName = `${root} ${subcommand}`;
+                    const cmd = cmds.find(c => c.command === fullCommandName);
+
+                    if (!cmd) {
+                        console.error(pc.red(`Unknown subcommand '${subcommand}' for '${root}'`));
+                        process.exit(1);
+                    }
+
+                    const CommandClass = cmd.class;
+                    // Map remaining args? 
+                    // The args array contains positional args AFTER subcommand.
+                    // But we didn't define them in CAC, so they are just strings.
+                    // We need to map them manually to the Target Command's args definition.
+                    // argsDef.args usually starts after the command.
+                    // For 'module add <url>', <url> is the first arg after 'add'.
+                    // So 'args' here corresponds to <url>.
+
+                    const argsDef = CommandClass.args || {};
+                    // If using [...args], the variadic args are collected into the first argument array
+                    // args here is what remains after popping options.
+                    const positionalArgs = (args.length > 0 && Array.isArray(args[0])) ? args[0] : args;
+
+                    const childOptions = { ...options }; // Copy options
+
+                    if (argsDef.args) {
+                        argsDef.args.forEach((arg: any, index: number) => {
+                            const isVariadic = arg.name.endsWith('...');
+                            const name = isVariadic ? arg.name.slice(0, -3) : arg.name;
+                            if (index < positionalArgs.length) {
+                                if (isVariadic) {
+                                    childOptions[name] = positionalArgs.slice(index);
+                                } else {
+                                    childOptions[name] = positionalArgs[index];
+                                }
+                            }
+                        });
+                    }
+
+                    await this.runCommand(CommandClass, childOptions);
+                });
+            }
+        }
         this.cli.help();
         this.cli.version(pkg.version);
 
@@ -129,6 +161,24 @@ export class CLI {
             this.cli.parse();
         } catch (e: any) {
             console.error(pc.red(e.message));
+            process.exit(1);
+        }
+    }
+
+    private registerGlobalOptions(cacCommand: any) {
+        cacCommand.option('--root-dir <path>', 'Override project root');
+        cacCommand.option('--debug', 'Enable debug mode');
+    }
+
+    private async runCommand(CommandClass: any, options: any) {
+        try {
+            const instance = new CommandClass(options);
+            instance.setCli(this);
+            await instance.init();
+            await instance.run(options);
+        } catch (e: any) {
+            console.error(pc.red(e.message));
+            if (options.debug) console.error(e.stack);
             process.exit(1);
         }
     }

@@ -61,10 +61,14 @@ describe('DevCommand', () => {
         const { prepareEnvironment } = await import('../../../src/utils/environment.js');
         expect(prepareEnvironment).toHaveBeenCalledWith('/mock/root');
 
-        expect(cp.spawn).toHaveBeenCalledWith('npx', ['astro', 'dev'], expect.objectContaining({
-            cwd: expect.stringContaining('_site'),
-            stdio: 'inherit'
-        }));
+        expect(cp.spawn).toHaveBeenCalledWith(
+            expect.stringContaining('astro'),
+            ['dev'],
+            expect.objectContaining({
+                cwd: expect.stringContaining('_site'),
+                stdio: 'inherit'
+            })
+        );
     });
 
     it('should handle errors during initialization', async () => {

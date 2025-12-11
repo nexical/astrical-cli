@@ -30,6 +30,7 @@ describe('CLI', () => {
         mockCommand = {
             option: vi.fn().mockReturnThis(),
             action: vi.fn(),
+            allowUnknownOptions: vi.fn().mockReturnThis(), // Added this
         };
 
         mockCac = {
@@ -354,5 +355,183 @@ describe('CLI', () => {
             expect.anything()
         );
         expect(mockCommand.option).toHaveBeenCalledWith('--verbose', 'Verbose', { default: undefined });
+    });
+    it('should register and run grouped subcommands', async () => {
+        class GroupCommand extends BaseCommand {
+            static args = {
+                args: [{ name: 'arg1', required: true }],
+                options: [{ name: '--force', description: 'Force' }]
+            };
+            async run() { }
+        }
+
+        mockLoad.mockResolvedValue([
+            { command: 'group add', class: GroupCommand, instance: new GroupCommand() },
+            { command: 'group remove', class: GroupCommand, instance: new GroupCommand() }
+        ]);
+        (fs.existsSync as any).mockReturnValue(true);
+
+        const cli = new CLI();
+        await cli.start();
+
+        // Should register the group root
+        expect(mockCac.command).toHaveBeenCalledWith(
+            expect.stringContaining('group <subcommand> [...args]'),
+            expect.anything()
+        );
+
+        // Find the action for the group command
+        // Since we registered multiple commands, find the call for 'group ...'
+        const groupCall = mockCac.command.mock.calls.find((call: any) => call[0].startsWith('group'));
+        expect(groupCall).toBeDefined();
+
+        // The processed command object (mockCommand) was returned by mockCac.command
+        // So mockCommand.action was called. We need to know WHICH action call corresponds to this.
+        // But our mockCac.command always returns the SAME mockCommand object.
+        // So mockCommand.action has been called multiple times (for 'test', 'opvar', etc from other tests if we didn't clear mocks properly, but beforeEach does clear).
+        // In THIS test, it's called for 'group ...'.
+
+        const actionFn = mockCommand.action.mock.calls[0][0];
+
+        const runSpy = vi.spyOn(GroupCommand.prototype, 'run');
+        vi.spyOn(GroupCommand.prototype, 'init').mockResolvedValue(undefined);
+
+        // Simulate running: group add val1 --force
+        // Args passed to action: subcommand, ...args, options
+        // subcommand = 'add'
+        // args = [['val1']] (variadic)
+        // options = { force: true }
+        await actionFn('add', ['val1'], { force: true });
+
+        expect(runSpy).toHaveBeenCalledWith(expect.objectContaining({
+            arg1: 'val1',
+            force: true
+        }));
+    });
+
+    it('should handle unknown subcommand', async () => {
+        mockLoad.mockResolvedValue([
+            { command: 'group add', class: MockCommand, instance: new MockCommand() }
+        ]);
+        (fs.existsSync as any).mockReturnValue(true);
+
+        const cli = new CLI();
+        await cli.start();
+
+        const actionFn = mockCommand.action.mock.calls[0][0];
+
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => { throw new Error('EXIT'); }) as any);
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+
+        // Run unknown subcommand
+        await expect(actionFn('unknown', [], {})).rejects.toThrow('EXIT');
+
+        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Unknown subcommand'));
+        expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    it('should map positional args in subcommand', async () => {
+        class SubArgsCommand extends BaseCommand {
+            static args = {
+                args: [{ name: 'p1', required: true }, { name: 'p2', required: false }]
+            };
+            async run() { }
+        }
+        mockLoad.mockResolvedValue([
+            { command: 'sys config', class: SubArgsCommand, instance: new SubArgsCommand() }
+        ]);
+        (fs.existsSync as any).mockReturnValue(true);
+
+        const cli = new CLI();
+        await cli.start();
+
+        const actionFn = mockCommand.action.mock.calls[0][0];
+        const runSpy = vi.spyOn(SubArgsCommand.prototype, 'run');
+        vi.spyOn(SubArgsCommand.prototype, 'init').mockResolvedValue(undefined);
+
+        // sys config a b
+        await actionFn('config', ['a', 'b'], {});
+
+        expect(runSpy).toHaveBeenCalledWith(expect.objectContaining({
+            p1: 'a',
+            p2: 'b'
+        }));
+    });
+
+    it('should map variadic args in subcommand', async () => {
+        class SubVarCommand extends BaseCommand {
+            static args = {
+                args: [{ name: 'files...', required: true }]
+            };
+            async run() { }
+        }
+        mockLoad.mockResolvedValue([
+            { command: 'sys add', class: SubVarCommand, instance: new SubVarCommand() }
+        ]);
+        (fs.existsSync as any).mockReturnValue(true);
+
+        const cli = new CLI();
+        await cli.start();
+
+        const actionFn = mockCommand.action.mock.calls[0][0];
+        const runSpy = vi.spyOn(SubVarCommand.prototype, 'run');
+        vi.spyOn(SubVarCommand.prototype, 'init').mockResolvedValue(undefined);
+
+        await actionFn('add', ['f1', 'f2'], {});
+
+        expect(runSpy).toHaveBeenCalledWith(expect.objectContaining({
+            files: ['f1', 'f2']
+        }));
+    });
+
+    it('should handle subcommand without metadata', async () => {
+        class NoMetaSubCommand extends BaseCommand {
+            async run() { }
+        }
+        (NoMetaSubCommand as any).args = undefined;
+
+        mockLoad.mockResolvedValue([
+            { command: 'sys plain', class: NoMetaSubCommand, instance: new NoMetaSubCommand() }
+        ]);
+        (fs.existsSync as any).mockReturnValue(true);
+
+        const cli = new CLI();
+        await cli.start();
+
+        const actionFn = mockCommand.action.mock.calls[0][0];
+        const runSpy = vi.spyOn(NoMetaSubCommand.prototype, 'run');
+        vi.spyOn(NoMetaSubCommand.prototype, 'init').mockResolvedValue(undefined);
+
+        await actionFn('plain', {});
+
+        expect(runSpy).toHaveBeenCalled();
+    });
+
+    it('should map positional args in subcommand when fewer provided', async () => {
+        class SubOptCommand extends BaseCommand {
+            static args = {
+                args: [{ name: 'r1', required: true }, { name: 'o1', required: false }]
+            };
+            async run() { }
+        }
+        mockLoad.mockResolvedValue([
+            { command: 'sys opt', class: SubOptCommand, instance: new SubOptCommand() }
+        ]);
+        (fs.existsSync as any).mockReturnValue(true);
+
+        const cli = new CLI();
+        await cli.start();
+
+        const actionFn = mockCommand.action.mock.calls[0][0];
+        const runSpy = vi.spyOn(SubOptCommand.prototype, 'run');
+        vi.spyOn(SubOptCommand.prototype, 'init').mockResolvedValue(undefined);
+
+        // Provides 1 arg, expects 2 slots
+        await actionFn('opt', ['val1'], {});
+
+        expect(runSpy).toHaveBeenCalledWith(expect.objectContaining({
+            r1: 'val1'
+        }));
+        // o1 should be undefined
     });
 });

@@ -2,8 +2,7 @@
 import { BaseCommand } from '../core/BaseCommand';
 import fs from 'fs-extra';
 import path from 'path';
-import { spawn } from 'child_process';
-import process from 'node:process';
+import { runCommand } from '../utils/shell.js';
 
 export default class BuildCommand extends BaseCommand {
     static paths = [['build']];
@@ -11,7 +10,7 @@ export default class BuildCommand extends BaseCommand {
     static description = 'Builds the production site.';
     static requiresProject = true;
 
-    async run() {
+    async run(options: any) {
         if (!this.projectRoot) {
             this.error('Project root not found.');
             return;
@@ -32,8 +31,6 @@ export default class BuildCommand extends BaseCommand {
 
         // 2. Copy Core contents
         if (await fs.pathExists(coreDir)) {
-            // fs.copy copies the directory itself if we do fs.copy(coreDir, siteDir) which is wrong if siteDir exists
-            // We want contents of coreDir into siteDir
             await fs.copy(coreDir, siteDir, {
                 overwrite: true,
                 filter: (src) => !src.includes('node_modules')
@@ -63,30 +60,17 @@ export default class BuildCommand extends BaseCommand {
 
         this.info('Environment assembled. Running Astro build...');
 
-        // 6. Spawn Astro
-        const child = spawn('npx', ['astro', 'build'], {
-            cwd: siteDir,
-            stdio: 'inherit',
-            env: {
-                ...process.env,
-                FORCE_COLOR: '1'
-            }
-        });
+        // 6. Run Astro using local binary from project root
+        // This avoids relying on global npx or PATH issues in tests
+        const astroBin = path.join(this.projectRoot, 'node_modules', '.bin', 'astro');
 
-        child.on('error', (err) => {
-            this.error(`Failed to start Astro: ${err.message}`);
-        });
+        try {
+            await runCommand(`${astroBin} build`, siteDir);
 
-        await new Promise<void>((resolve) => {
-            child.on('close', (code) => {
-                if (code !== 0) {
-                    this.error('Build failed', code || 1);
-                } else {
-                    this.success('Build completed successfully.');
-                    this.success(`Output generated at ${path.join(siteDir, 'dist')}`);
-                }
-                resolve();
-            });
-        });
+            this.success('Build completed successfully.');
+            this.success(`Output generated at ${path.join(siteDir, 'dist')}`);
+        } catch (e: any) {
+            this.error(`Build failed: ${e.message}`, 1);
+        }
     }
 }

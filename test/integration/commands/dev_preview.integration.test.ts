@@ -48,8 +48,8 @@ describe('Dev/Preview Integration', () => {
         await command.run();
 
         expect(spawnMock).toHaveBeenCalledWith(
-            'npx',
-            ['astro', 'dev'],
+            expect.stringContaining('node_modules/.bin/astro'),
+            ['dev'],
             expect.objectContaining({
                 cwd: expect.stringContaining('_site')
             })
@@ -63,8 +63,8 @@ describe('Dev/Preview Integration', () => {
         await command.run();
 
         expect(spawnMock).toHaveBeenCalledWith(
-            'npx',
-            ['astro', 'preview'],
+            expect.stringContaining('node_modules/.bin/astro'),
+            ['preview'],
             expect.objectContaining({
                 cwd: expect.stringContaining('_site')
             })

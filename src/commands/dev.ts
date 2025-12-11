@@ -18,11 +18,6 @@ export default class DevCommand extends BaseCommand {
         }
 
         const siteDir = path.resolve(this.projectRoot, '_site');
-        const srcDir = path.resolve(this.projectRoot, 'src');
-        const coreDir = path.resolve(srcDir, 'core');
-        const modulesDir = path.resolve(srcDir, 'modules');
-        const contentDir = path.resolve(srcDir, 'content');
-        const publicDir = path.resolve(this.projectRoot, 'public');
 
         this.info('Initializing ephemeral build environment...');
 
@@ -34,13 +29,11 @@ export default class DevCommand extends BaseCommand {
             return;
         }
 
-        // 6. Create src/env.d.ts if it doesn't exist (Astro needs it) or other critical files?
-        // Usually handled by core, but let's assume core has it.
-
         this.success('Environment ready. Starting Astro...');
 
-        // 7. Spawn Astro
-        const child = spawn('npx', ['astro', 'dev'], {
+        const astroBin = path.join(this.projectRoot, 'node_modules', '.bin', 'astro');
+
+        const child = spawn(astroBin, ['dev'], {
             cwd: siteDir,
             stdio: 'inherit',
             env: {
@@ -53,7 +46,6 @@ export default class DevCommand extends BaseCommand {
             this.error(`Failed to start Astro: ${err.message}`);
         });
 
-        // Handle process termination to kill child
         const cleanup = () => {
             child.kill();
             process.exit();
@@ -62,12 +54,8 @@ export default class DevCommand extends BaseCommand {
         process.on('SIGINT', cleanup);
         process.on('SIGTERM', cleanup);
 
-        // Wait for child to exit
         await new Promise<void>((resolve) => {
             child.on('close', (code) => {
-                if (code !== 0) {
-                    // don't error hard, just exit
-                }
                 resolve();
             });
         });

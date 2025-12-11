@@ -23,13 +23,16 @@ describe('shell utils', () => {
         const mockExec = vi.mocked(cp.exec);
         mockExec.mockImplementation(((cmd: string, options: any, cb: any) => {
             const callback = cb || options;
-            callback(null, 'stdout output', '');
+            callback(null, { stdout: 'stdout output', stderr: '' }); // exec result is an object with stdout/stderr
             return {} as any;
         }) as any);
+
+        const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => { });
 
         await runCommand('ls -la');
 
         expect(mockExec).toHaveBeenCalledWith('ls -la', expect.anything(), expect.anything());
+        expect(consoleSpy).toHaveBeenCalledWith('stdout output');
     });
 
     it('should pass cwd to exec', async () => {

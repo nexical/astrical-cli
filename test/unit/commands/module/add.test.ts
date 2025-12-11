@@ -34,17 +34,17 @@ describe('ModuleAddCommand', () => {
 
     it('should error if project root is missing', async () => {
         command = new ModuleAddCommand({ rootDir: undefined });
-        await command.run('arg');
+        await command.run({ url: 'arg' });
         expect(logger.error).toHaveBeenCalledWith('Project root not found.');
     });
 
     it('should error if url is missing', async () => {
-        await command.run(undefined as any);
+        await command.run({ url: undefined });
         expect(logger.error).toHaveBeenCalledWith('Please specify a repository URL.');
     });
 
     it('should add submodule and install dependencies', async () => {
-        await command.run('https://git.com/repo.git', 'repo');
+        await command.run({ url: 'https://git.com/repo.git', name: 'repo' });
 
         expect(shell.runCommand).toHaveBeenCalledWith(
             expect.stringContaining('git submodule add https://git.com/repo.git src/modules/repo'),
@@ -55,7 +55,7 @@ describe('ModuleAddCommand', () => {
     });
 
     it('should expand gh@ syntax', async () => {
-        await command.run('gh@org/repo', 'repo');
+        await command.run({ url: 'gh@org/repo', name: 'repo' });
         expect(shell.runCommand).toHaveBeenCalledWith(
             expect.stringContaining('https://github.com/org/repo.git'),
             '/mock/root'
@@ -63,7 +63,7 @@ describe('ModuleAddCommand', () => {
     });
 
     it('should handled gh@ syntax with existing .git', async () => {
-        await command.run('gh@org/repo.git', 'repo');
+        await command.run({ url: 'gh@org/repo.git', name: 'repo' });
         expect(shell.runCommand).toHaveBeenCalledWith(
             expect.stringContaining('https://github.com/org/repo.git'),
             '/mock/root'
@@ -71,7 +71,7 @@ describe('ModuleAddCommand', () => {
     });
 
     it('should handle url ending with .git', async () => {
-        await command.run('https://github.com/org/repo.git', 'repo');
+        await command.run({ url: 'https://github.com/org/repo.git', name: 'repo' });
         expect(shell.runCommand).toHaveBeenCalledWith(
             expect.stringContaining('https://github.com/org/repo.git'),
             '/mock/root'
@@ -79,7 +79,7 @@ describe('ModuleAddCommand', () => {
     });
 
     it('should infer name from url if not provided', async () => {
-        await command.run('https://github.com/org/inferred.git');
+        await command.run({ url: 'https://github.com/org/inferred.git' });
         expect(shell.runCommand).toHaveBeenCalledWith(
             expect.stringContaining('src/modules/inferred'),
             '/mock/root'
@@ -88,13 +88,13 @@ describe('ModuleAddCommand', () => {
 
     it('should handle runCommand failure', async () => {
         vi.mocked(shell.runCommand).mockRejectedValue(new Error('Git error'));
-        await command.run('http://repo.git', 'repo');
+        await command.run({ url: 'http://repo.git', name: 'repo' });
         expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('Failed to add module'));
     });
 
     it('should error if module already exists', async () => {
         vi.mocked(fs.pathExists).mockResolvedValue(true);
-        await command.run('url', 'existing');
+        await command.run({ url: 'url', name: 'existing' });
         expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('already exists'));
         expect(shell.runCommand).not.toHaveBeenCalled();
     });

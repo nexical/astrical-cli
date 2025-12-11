@@ -53,8 +53,16 @@ export async function createMockRepo(dir: string, initialFiles: Record<string, s
 /**
  * Runs the CLI command against the compiled binary (E2E style)
  */
-export async function runCLI(args: string[], cwd: string) {
-    return execa('node', [CLI_BIN, ...args], { cwd });
+export async function runCLI(args: string[], cwd: string, options: any = {}) {
+    return execa('node', [CLI_BIN, ...args], {
+        cwd,
+        ...options,
+        env: {
+            ...process.env,
+            ...options.env
+        },
+        reject: false // Allow checking exit code in tests
+    });
 }
 
 /**

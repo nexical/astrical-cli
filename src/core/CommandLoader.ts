@@ -50,11 +50,9 @@ export class CommandLoader {
 
                 // Import
                 try {
-                    // console.log(`Loading command from ${fullPath}`);
                     const module = await this.importer(fullPath);
                     // Assume default export is the command class
                     const CommandClass = module.default;
-                    // console.log(`Loaded class: ${CommandClass?.name}`);
 
                     if (CommandClass) { // Loose check for now to debug
                         const commandName = commandParts.join(' ');

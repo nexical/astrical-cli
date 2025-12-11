@@ -107,4 +107,19 @@ describe('BaseCommand', () => {
         expect(logger.error).toHaveBeenCalledWith('fail');
         expect(logger.error).toHaveBeenCalledTimes(2); // One for message, one for stack
     });
+    it('should skip config loading if project root is not found', async () => {
+        (ConfigUtils.findProjectRoot as any).mockResolvedValue(null);
+        const cmd = new TestCommand({});
+        await cmd.init();
+        expect((cmd as any).projectRoot).toBeNull();
+        expect(ConfigUtils.loadConfig).not.toHaveBeenCalled();
+        expect((cmd as any).config).toEqual({});
+    });
+
+    it('should set CLI instance', () => {
+        const cmd = new TestCommand();
+        const mockCli = { version: '1.0.0' };
+        cmd.setCli(mockCli);
+        expect((cmd as any).cli).toBe(mockCli);
+    });
 });

@@ -6,7 +6,10 @@ const execAsync = promisify(exec);
 
 export async function runCommand(command: string, cwd?: string): Promise<void> {
     try {
-        await execAsync(command, { cwd });
+        const { stdout } = await execAsync(command, { cwd });
+        if (stdout) {
+            console.log(stdout);
+        }
     } catch (error: any) {
         logger.error(`Command failed: ${command}`);
         if (error.stderr) {

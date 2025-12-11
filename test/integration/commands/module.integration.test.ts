@@ -76,7 +76,7 @@ describe('Module Commands Integration', () => {
             // BaseCommand.init() calls findProjectRoot().
             // So we must call init() or manual setup.
             await addCmd.init();
-            await addCmd.run(moduleRepo, 'my-module');
+            await addCmd.run({ url: moduleRepo, name: 'my-module' });
 
             const modulePath = path.join(projectDir, 'src/modules/my-module');
             expect(fs.existsSync(modulePath)).toBe(true);
