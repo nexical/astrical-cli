@@ -1,0 +1,53 @@
+
+import { BaseCommand } from '../../core/BaseCommand';
+import fs from 'fs-extra';
+import path from 'path';
+import { runCommand } from '../../utils/shell.js';
+
+export default class ModuleRemoveCommand extends BaseCommand {
+    static paths = [['module', 'remove']];
+    static usage = 'module remove <name>';
+    static description = 'Remove an installed module.';
+    static requiresProject = true;
+
+    static args = {
+        args: [
+            { name: 'name', required: true, description: 'Name of the module to remove' }
+        ]
+    };
+
+    async run(name: string) {
+        if (!this.projectRoot) {
+            this.error('Project root not found.');
+            return;
+        }
+
+        const relativePath = `src/modules/${name}`;
+        const fullPath = path.resolve(this.projectRoot, relativePath);
+
+        if (!(await fs.pathExists(fullPath))) {
+            this.error(`Module ${name} not found at ${relativePath}.`);
+            return;
+        }
+
+        this.info(`Removing module ${name}...`);
+
+        try {
+            await runCommand(`git submodule deinit -f ${relativePath}`, this.projectRoot);
+            await runCommand(`git rm -f ${relativePath}`, this.projectRoot);
+
+            // Clean up .git/modules
+            const gitModulesDir = path.resolve(this.projectRoot, '.git', 'modules', 'src', 'modules', name);
+            if (await fs.pathExists(gitModulesDir)) {
+                await fs.remove(gitModulesDir);
+            }
+
+            this.info('Syncing workspace dependencies...');
+            await runCommand('npm install', this.projectRoot);
+
+            this.success(`Module ${name} removed successfully.`);
+        } catch (e: any) {
+            this.error(`Failed to remove module: ${e.message}`);
+        }
+    }
+}

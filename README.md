@@ -122,6 +122,168 @@ npx astrical init <directory> [options]
 
 ---
 
+#### `dev`
+
+Starts the development server in ephemeral mode. It constructs a temporary build environment in `_site` and runs the Astro dev server with Hot Module Replacement (HMR).
+
+**Usage:**
+```bash
+npx astrical dev
+```
+
+**What it does:**
+1.  **Prepares** the `_site` directory by mounting `src/core`, `src/modules`, and content.
+2.  **Starts** the Astro development server (accessible at `http://localhost:4321` by default).
+3.  **Watches** for changes in your project and updates the ephemeral build automatically.
+
+---
+
+#### `build`
+
+Compiles the project for production. It assembles the final site structure in `_site` and generates static assets.
+
+**Usage:**
+```bash
+npx astrical build
+```
+
+**What it does:**
+1.  **Cleans** the `_site` directory to ensure a fresh build.
+2.  **Copies** all necessary source files (`src/core`, `src/modules`, `src/content`, `public`) into `_site`.
+3.  **Runs** `astro build` to generate the production output in `_site/dist`.
+
+**Output:**
+- A production-ready static site in `_site/dist`.
+
+---
+
+#### `preview`
+
+Previews the locally built production site. This is useful for verifying the output of `astrical build` before deploying.
+
+**Usage:**
+```bash
+npx astrical preview
+```
+
+**Prerequisites:**
+- You must run `astrical build` first.
+
+**What it does:**
+- Starts a local web server serving the static files from `_site/dist`.
+
+---
+
+#### `clean`
+
+Removes generated build artifacts and temporary directories to ensure a clean state.
+
+**Usage:**
+```bash
+npx astrical clean
+```
+
+**What it does:**
+- Deletes `_site`, `dist`, and `node_modules/.vite`.
+
+---
+
+#### `run`
+
+Executes a script within the Astrical environment context. This handles path resolution and environment variable setup for you.
+
+**Usage:**
+```bash
+npx astrical run <script> [args...]
+```
+
+**Arguments:**
+- `script` (Required): The name of the script to run.
+    - Can be a standard `package.json` script (e.g., `test`).
+    - Can be a module-specific script using `module:script` syntax (e.g., `blog:sync`).
+- `args` (Optional): Additional arguments to pass to the script.
+
+**Examples:**
+```bash
+# Run a core project script
+npx astrical run test
+
+# Run a script defined in the 'blog' module's package.json
+npx astrical run blog:sync --force
+```
+
+---
+
+#### `module`
+
+Manages the modular architecture of your Astrical project. Allows you to add, remove, update, and list Git-based modules.
+
+##### `module add`
+
+Adds a new module as a Git submodule.
+
+**Usage:**
+```bash
+npx astrical module add <url> [name]
+```
+
+**Arguments:**
+- `url` (Required): The Git repository URL of the module.
+    - Supports `gh@owner/repo` shorthand.
+- `name` (Optional): The folder name for the module. Defaults to the repository name.
+
+**What it does:**
+1.  Adds the repository as a git submodule in `src/modules/<name>`.
+2.  Installs any new dependencies via `npm install`.
+
+##### `module list`
+
+Lists all installed modules in the project.
+
+**Usage:**
+```bash
+npx astrical module list
+```
+
+**Output:**
+- A table showing the name, version, and description of each installed module found in `src/modules`.
+
+##### `module update`
+
+Updates one or all modules to their latest remote commit.
+
+**Usage:**
+```bash
+npx astrical module update [name]
+```
+
+**Arguments:**
+- `name` (Optional): The specific module to update. If omitted, all modules are updated.
+
+**What it does:**
+1.  Runs `git submodule update --remote --merge` for the target(s).
+2.  Re-installs dependencies to ensure `package-lock.json` is consistent.
+
+##### `module remove`
+
+Removes an installed module and cleans up references.
+
+**Usage:**
+```bash
+npx astrical module remove <name>
+```
+
+**Arguments:**
+- `name` (Required): The name of the module to remove.
+
+**What it does:**
+1.  De-initializes the git submodule.
+2.  Removes the module directory from `src/modules`.
+3.  Cleans up internal git metadata (`.git/modules`).
+4.  Updates `npm` dependencies.
+
+---
+
 ## Project Structure
 
 ```mermaid
