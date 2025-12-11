@@ -3,6 +3,7 @@ import { BaseCommand } from '../../core/BaseCommand';
 import fs from 'fs-extra';
 import path from 'path';
 import { runCommand } from '../../utils/shell.js';
+import { logger } from '../../utils/logger.js';
 
 export default class ModuleAddCommand extends BaseCommand {
     static paths = [['module', 'add']];
@@ -18,7 +19,7 @@ export default class ModuleAddCommand extends BaseCommand {
     };
 
     async run(options: any) {
-        console.log('DEBUG: ModuleAdd Options:', JSON.stringify(options, null, 2));
+        logger.debug('ModuleAdd Options:', options);
         let { url, name } = options;
 
         if (!this.projectRoot) {
@@ -54,10 +55,15 @@ export default class ModuleAddCommand extends BaseCommand {
 
         this.info(`Adding submodule ${name} from ${url}...`);
 
-        console.log('DEBUG: projectRoot', this.projectRoot);
-        console.log('DEBUG: targetDir', targetDir);
-        console.log('DEBUG: relativeTargetDir', relativeTargetDir);
-        console.log('DEBUG: Executing git submodule add', url, relativeTargetDir);
+        this.info(`Adding submodule ${name} from ${url}...`);
+
+        logger.debug('Module Add Context:', {
+            projectRoot: this.projectRoot,
+            targetDir,
+            relativeTargetDir,
+            url
+        });
+        logger.debug('Executing git submodule add...');
 
         try {
             await runCommand(`git submodule add ${url} ${relativeTargetDir}`, this.projectRoot);

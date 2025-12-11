@@ -3,6 +3,7 @@ import { BaseCommand } from '../../core/BaseCommand';
 import fs from 'fs-extra';
 import path from 'path';
 import { runCommand } from '../../utils/shell.js';
+import { logger } from '../../utils/logger.js';
 
 export default class ModuleUpdateCommand extends BaseCommand {
     static paths = [['module', 'update']];
@@ -23,6 +24,7 @@ export default class ModuleUpdateCommand extends BaseCommand {
         }
 
         this.info(name ? `Updating module ${name}...` : 'Updating all modules...');
+        logger.debug('Update context:', { name, projectRoot: this.projectRoot });
 
         try {
             if (name) {

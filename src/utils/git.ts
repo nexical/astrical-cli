@@ -1,11 +1,14 @@
 import { runCommand } from './shell.js';
+import { logger } from './logger.js';
 
 export async function clone(url: string, destination: string, recursive = false): Promise<void> {
     const cmd = `git clone ${recursive ? '--recursive ' : ''}${url} .`;
+    logger.debug(`Git clone: ${url} to ${destination}`);
     await runCommand(cmd, destination);
 }
 
 export async function updateSubmodules(cwd: string): Promise<void> {
+    logger.debug(`Updating submodules in ${cwd}`);
     await runCommand('git submodule foreach --recursive "git checkout main && git pull origin main"', cwd);
 }
 

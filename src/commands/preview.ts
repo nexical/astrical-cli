@@ -4,6 +4,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import { spawn } from 'child_process';
 import process from 'node:process';
+import { logger } from '../utils/logger.js';
 
 export default class PreviewCommand extends BaseCommand {
     static paths = [['preview']];
@@ -20,6 +21,8 @@ export default class PreviewCommand extends BaseCommand {
         const siteDir = path.resolve(this.projectRoot, '_site');
         const distDir = path.join(siteDir, 'dist');
 
+        logger.debug('Preview paths:', { siteDir, distDir });
+
         if (!(await fs.pathExists(distDir))) {
             this.error("Please run 'astrical build' first.");
             return;
@@ -28,6 +31,7 @@ export default class PreviewCommand extends BaseCommand {
         this.info('Starting preview server...');
 
         const astroBin = path.join(this.projectRoot, 'node_modules', '.bin', 'astro');
+        logger.debug(`Spawning astro preview from: ${astroBin} in ${siteDir}`);
 
         const child = spawn(astroBin, ['preview'], {
             cwd: siteDir,

@@ -4,6 +4,7 @@ import * as git from '../utils/git.js';
 import { runCommand } from '../utils/shell.js';
 import fs from 'node:fs';
 import path from 'node:path';
+import { logger } from '../utils/logger.js';
 
 export default class InitCommand extends BaseCommand {
     static description = 'Initialize a new Astrical project';
@@ -30,7 +31,10 @@ export default class InitCommand extends BaseCommand {
         // Handle gh@ syntax
         if (repoUrl.startsWith('gh@')) {
             repoUrl = `https://github.com/${repoUrl.substring(3)}.git`;
+            logger.debug(`Resolved gh@ shorthad to: ${repoUrl}`);
         }
+
+        logger.debug('Init options:', { directory, targetPath, repoUrl });
 
         this.info(`Initializing project in: ${targetPath}`);
         this.info(`Using starter repository: ${repoUrl}`);

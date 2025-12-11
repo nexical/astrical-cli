@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { BaseCommand } from './BaseCommand.js';
+import { logger } from '../utils/logger.js';
 
 export interface LoadedCommand {
     command: string; // "module add"
@@ -18,7 +19,9 @@ export class CommandLoader {
     }
 
     async load(commandsDir: string): Promise<LoadedCommand[]> {
+        logger.debug(`Loading commands from: ${commandsDir}`);
         if (!fs.existsSync(commandsDir)) {
+            logger.debug(`Commands directory not found: ${commandsDir}`);
             return [];
         }
 
@@ -39,6 +42,7 @@ export class CommandLoader {
                 // Ignore index files or non-command files if needed, but for now scan all.
                 // Assuming "index.ts" might be the command for the directory path itself if we supported that,
                 // but let's stick to "create.ts" -> "create"
+                logger.debug(`Found potential command file: ${fullPath}`);
 
                 const name = path.basename(file, path.extname(file));
                 const commandParts = [...prefix];
@@ -56,6 +60,7 @@ export class CommandLoader {
 
                     if (CommandClass) { // Loose check for now to debug
                         const commandName = commandParts.join(' ');
+                        logger.debug(`Registered command: ${commandName}`);
                         this.commands.push({
                             command: commandName,
                             path: fullPath,
@@ -64,7 +69,7 @@ export class CommandLoader {
                         });
                     }
                 } catch (e) {
-                    console.error(`Failed to load command at ${fullPath}`, e);
+                    logger.error(`Failed to load command at ${fullPath}`, e);
                 }
             }
         }

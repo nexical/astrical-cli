@@ -2,6 +2,7 @@
 import { BaseCommand } from '../../core/BaseCommand';
 import fs from 'fs-extra';
 import path from 'path';
+import { logger } from '../../utils/logger.js';
 
 export default class ModuleListCommand extends BaseCommand {
     static paths = [['module', 'list']];
@@ -16,6 +17,7 @@ export default class ModuleListCommand extends BaseCommand {
         }
 
         const modulesDir = path.resolve(this.projectRoot, 'src', 'modules');
+        logger.debug(`Scanning for modules in: ${modulesDir}`);
 
         if (!(await fs.pathExists(modulesDir))) {
             this.info('No modules installed (src/modules directory missing).');

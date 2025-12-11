@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import pc from 'picocolors';
 import pkg from '../../package.json';
+import { logger, setDebugMode } from '../utils/logger.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -31,6 +32,12 @@ export class CLI {
         // Strategy: Try both relative locations (sibling 'commands' folder)
         // because tsup might put index.js at root of dist, and commands in dist/commands
 
+        // Check for debug flag early
+        if (process.argv.includes('--debug')) {
+            setDebugMode(true);
+            logger.debug('Debug mode enabled via --debug flag');
+        }
+
         const possibleDirs = [
             path.resolve(__dirname, 'commands'),
             path.resolve(__dirname, '../commands'),
@@ -47,7 +54,7 @@ export class CLI {
 
         // Fallback or error
         if (!commandsDir) {
-            // logger.debug("No commands directory found.");
+            logger.debug("No commands directory found.");
         }
 
         this.loadedCommands = await this.loader.load(commandsDir);

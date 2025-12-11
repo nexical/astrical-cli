@@ -3,6 +3,7 @@ import { BaseCommand } from '../core/BaseCommand';
 import fs from 'fs-extra';
 import path from 'path';
 import { runCommand } from '../utils/shell.js';
+import { logger } from '../utils/logger.js';
 
 export default class BuildCommand extends BaseCommand {
     static paths = [['build']];
@@ -23,9 +24,12 @@ export default class BuildCommand extends BaseCommand {
         const contentDir = path.resolve(srcDir, 'content');
         const publicDir = path.resolve(this.projectRoot, 'public');
 
+        logger.debug('Build paths resolved:', { siteDir, srcDir, coreDir, modulesDir, contentDir, publicDir });
+
         this.info('Building for production...');
 
         // 1. Clean _site
+        logger.debug(`Cleaning site directory: ${siteDir}`);
         await fs.remove(siteDir);
         await fs.ensureDir(siteDir);
 
@@ -63,6 +67,7 @@ export default class BuildCommand extends BaseCommand {
         // 6. Run Astro using local binary from project root
         // This avoids relying on global npx or PATH issues in tests
         const astroBin = path.join(this.projectRoot, 'node_modules', '.bin', 'astro');
+        logger.debug(`Using astro binary at: ${astroBin}`);
 
         try {
             await runCommand(`${astroBin} build`, siteDir);

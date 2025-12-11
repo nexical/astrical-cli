@@ -9,6 +9,17 @@ import path from 'node:path';
 vi.mock('cac');
 vi.mock('../../../src/core/CommandLoader.js');
 vi.mock('node:fs');
+vi.mock('../../../src/utils/logger.js', () => ({
+    logger: {
+        debug: vi.fn(),
+        error: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+    },
+    setDebugMode: vi.fn()
+}));
+
+import { setDebugMode, logger } from '../../../src/utils/logger.js';
 
 class MockCommand extends BaseCommand {
     static description = 'Mock Desc';
@@ -61,6 +72,21 @@ describe('CLI', () => {
         expect(mockCac.help).toHaveBeenCalled();
         expect(mockCac.version).toHaveBeenCalled();
         expect(mockCac.parse).toHaveBeenCalled();
+    });
+
+    it('should enable debug mode if --debug flag is present', async () => {
+        const cli = new CLI();
+        (fs.existsSync as any).mockReturnValue(true);
+        
+        const originalArgv = process.argv;
+        process.argv = [...originalArgv, '--debug'];
+
+        await cli.start();
+
+        expect(setDebugMode).toHaveBeenCalledWith(true);
+        expect(logger.debug).toHaveBeenCalledWith(expect.stringContaining('Debug mode enabled'));
+
+        process.argv = originalArgv;
     });
 
     it('should search for commands in multiple directories', async () => {
@@ -226,6 +252,7 @@ describe('CLI', () => {
         // Should not throw
         await cli.start();
         expect(mockLoad).toHaveBeenCalledWith('');
+        expect(logger.debug).toHaveBeenCalledWith('No commands directory found.');
     });
 
     it('should register command without args or options', async () => {

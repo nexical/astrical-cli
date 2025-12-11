@@ -3,6 +3,7 @@ import { BaseCommand } from '../../core/BaseCommand';
 import fs from 'fs-extra';
 import path from 'path';
 import { runCommand } from '../../utils/shell.js';
+import { logger } from '../../utils/logger.js';
 
 export default class ModuleRemoveCommand extends BaseCommand {
     static paths = [['module', 'remove']];
@@ -24,6 +25,8 @@ export default class ModuleRemoveCommand extends BaseCommand {
 
         const relativePath = `src/modules/${name}`;
         const fullPath = path.resolve(this.projectRoot, relativePath);
+
+        logger.debug('Removing module at:', fullPath);
 
         if (!(await fs.pathExists(fullPath))) {
             this.error(`Module ${name} not found at ${relativePath}.`);

@@ -1,7 +1,7 @@
 
 import fs from 'fs-extra';
 import path from 'path';
-import { logger } from './logger';
+import { logger } from './logger.js';
 
 export async function prepareEnvironment(projectRoot: string) {
     const siteDir = path.resolve(projectRoot, '_site');
@@ -10,6 +10,8 @@ export async function prepareEnvironment(projectRoot: string) {
     const modulesDir = path.resolve(srcDir, 'modules');
     const contentDir = path.resolve(srcDir, 'content');
     const publicDir = path.resolve(projectRoot, 'public');
+
+    logger.debug('Preparing environment paths:', { siteDir, srcDir });
 
     // 1. Ensure _site exists
     await fs.ensureDir(siteDir);

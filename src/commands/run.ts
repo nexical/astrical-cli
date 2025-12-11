@@ -5,6 +5,7 @@ import path from 'path';
 import { spawn } from 'child_process';
 import process from 'node:process';
 import { prepareEnvironment } from '../utils/environment.js';
+import { logger } from '../utils/logger.js';
 
 export default class RunCommand extends BaseCommand {
     static paths = [['run']];
@@ -37,6 +38,8 @@ export default class RunCommand extends BaseCommand {
         await prepareEnvironment(this.projectRoot!);
         const siteDir = path.resolve(this.projectRoot!, '_site');
 
+        logger.debug('Run command context:', { script, args: scriptArgs, siteDir });
+
         // Initialize command to default npm run
         let finalCmd = 'npm';
         let finalArgs = ['run', script, '--', ...scriptArgs];
@@ -45,6 +48,7 @@ export default class RunCommand extends BaseCommand {
         if (script.includes(':')) {
             const [moduleName, scriptName] = script.split(':');
             const modulePath = path.resolve(this.projectRoot!, 'src', 'modules', moduleName);
+            logger.debug(`Resolving module script: ${moduleName}:${scriptName} at ${modulePath}`);
 
             // Check if module exists
             const modulePkgJsonPath = path.join(modulePath, 'package.json');
@@ -73,6 +77,8 @@ export default class RunCommand extends BaseCommand {
                 }
             }
         }
+
+        logger.debug(`Executing final command: ${finalCmd} ${finalArgs.join(' ')} `);
 
         const child = spawn(finalCmd, finalArgs, {
             cwd: siteDir,

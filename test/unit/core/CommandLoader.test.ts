@@ -3,8 +3,18 @@ import { CommandLoader } from '../../../src/core/CommandLoader.js';
 import { BaseCommand } from '../../../src/core/BaseCommand.js';
 import fs from 'node:fs';
 import path from 'node:path';
+import { logger } from '../../../src/utils/logger.js';
 
 vi.mock('node:fs');
+vi.mock('../../../src/utils/logger.js', () => ({
+    logger: {
+        debug: vi.fn(),
+        error: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        success: vi.fn()
+    }
+}));
 
 class MockCommand extends BaseCommand {
     async run() { }
@@ -42,16 +52,12 @@ describe('CommandLoader', () => {
         (fs.readdirSync as any).mockReturnValue(['error.ts']);
         (fs.statSync as any).mockReturnValue({ isDirectory: () => false });
 
-        // Mock console.error to avoid noise
-        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
-
         mockImporter.mockRejectedValue(new Error('Load failed'));
 
         const commands = await loader.load(rootDir);
 
         expect(commands).toHaveLength(0);
-        expect(consoleSpy).toHaveBeenCalled();
-        consoleSpy.mockRestore();
+        expect(logger.error).toHaveBeenCalled();
     });
 
     it('should skip files that do not default export a class', async () => {
@@ -104,14 +110,13 @@ describe('CommandLoader', () => {
         (fs.statSync as any).mockReturnValue({ isDirectory: () => false });
 
         // Suppress error log
-        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+        // const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
 
         await loader.load(rootDir);
 
         // If we reach here, we survived the import error, meaning the catch block was hit
         // and impliedly the try block (and importer) was executed.
-        expect(consoleSpy).toHaveBeenCalled();
-        consoleSpy.mockRestore();
+        expect(logger.error).toHaveBeenCalled();
     });
 
     it('should load .js files', async () => {

@@ -4,6 +4,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import { spawn } from 'child_process';
 import process from 'node:process';
+import { logger } from '../utils/logger.js';
 
 export default class DevCommand extends BaseCommand {
     static paths = [['dev']];
@@ -23,6 +24,7 @@ export default class DevCommand extends BaseCommand {
 
         try {
             const { prepareEnvironment } = await import('../utils/environment.js');
+            logger.debug(`Preparing environment at: ${this.projectRoot}`);
             await prepareEnvironment(this.projectRoot);
         } catch (error: any) {
             this.error(error);
@@ -32,6 +34,7 @@ export default class DevCommand extends BaseCommand {
         this.success('Environment ready. Starting Astro...');
 
         const astroBin = path.join(this.projectRoot, 'node_modules', '.bin', 'astro');
+        logger.debug(`Spawning astro dev from: ${astroBin} in ${siteDir}`);
 
         const child = spawn(astroBin, ['dev'], {
             cwd: siteDir,
