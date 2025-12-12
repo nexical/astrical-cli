@@ -42,9 +42,7 @@ describe('HelpCommand', () => {
         };
 
         mockCli = {
-            cli: {
-                name: 'app',
-            },
+            name: 'app',
             getCommands: vi.fn(),
             getRawCLI: vi.fn().mockReturnValue(mockRawCli)
         };
