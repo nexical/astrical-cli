@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, afterAll } from 'vitest';
-import InitCommand from '../../../commands/init.js';
+import InitCommand from '../../../src/commands/init.js';
 import { createTempDir, createMockRepo, cleanupTestRoot } from '../../utils/integration-helpers.js';
 import path from 'node:path';
 import fs from 'fs-extra';

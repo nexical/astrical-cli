@@ -1,6 +1,6 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import CleanCommand from '../../../commands/clean.js';
+import CleanCommand from '../../../src/commands/clean.js';
 import { logger } from '../../../core/src/utils/logger.js';
 import fs from 'fs-extra';
 import path from 'path';

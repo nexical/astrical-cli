@@ -1,6 +1,6 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import RunCommand from '../../../commands/run.js';
+import RunCommand from '../../../src/commands/run.js';
 import fs from 'fs-extra';
 import cp from 'child_process';
 import EventEmitter from 'events';
@@ -63,7 +63,7 @@ describe('RunCommand', () => {
         // run(script, options)
         await command.run('test', {});
 
-        const { prepareEnvironment } = await import('../../../utils/environment.js');
+        const { prepareEnvironment } = await import('../../../src/utils/environment.js');
         expect(prepareEnvironment).toHaveBeenCalled();
 
         expect(cp.spawn).toHaveBeenCalledWith('npm', ['run', 'test', '--'], expect.objectContaining({

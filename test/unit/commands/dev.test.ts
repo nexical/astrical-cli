@@ -1,6 +1,6 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import DevCommand from '../../../commands/dev.js';
+import DevCommand from '../../../src/commands/dev.js';
 import { logger } from '../../../core/src/utils/logger.js';
 import cp from 'child_process';
 import EventEmitter from 'events';
@@ -58,7 +58,7 @@ describe('DevCommand', () => {
 
         await command.run();
 
-        const { prepareEnvironment } = await import('../../../utils/environment.js');
+        const { prepareEnvironment } = await import('../../../src/utils/environment.js');
         expect(prepareEnvironment).toHaveBeenCalledWith('/mock/root');
 
         expect(cp.spawn).toHaveBeenCalledWith(
@@ -72,7 +72,7 @@ describe('DevCommand', () => {
     });
 
     it('should handle errors during initialization', async () => {
-        const { prepareEnvironment } = await import('../../../utils/environment.js');
+        const { prepareEnvironment } = await import('../../../src/utils/environment.js');
         vi.mocked(prepareEnvironment).mockRejectedValueOnce(new Error('Init failed'));
 
         // We need to finish the command execution somehow, or expect it to proceed?

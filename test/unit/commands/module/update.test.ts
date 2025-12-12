@@ -1,6 +1,6 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import ModuleUpdateCommand from '../../../../commands/module/update.js';
+import ModuleUpdateCommand from '../../../../src/commands/module/update.js';
 import { logger } from '../../../../core/src/utils/logger.js';
 import * as shell from '../../../../core/src/utils/shell.js';
 import fs from 'fs-extra';

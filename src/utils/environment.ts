@@ -1,7 +1,7 @@
 
 import fs from 'fs-extra';
 import path from 'path';
-import { logger } from '../core/src/utils/logger.js';
+import { logger } from '../../core/src/utils/logger.js';
 
 export async function prepareEnvironment(projectRoot: string) {
     const siteDir = path.resolve(projectRoot, '_site');

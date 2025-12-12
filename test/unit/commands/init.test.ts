@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import InitCommand from '../../../commands/init.js';
+import InitCommand from '../../../src/commands/init.js';
 import { logger } from '../../../core/src/utils/logger.js';
-import * as git from '../../../utils/git.js';
+import * as git from '../../../src/utils/git.js';
 import * as shell from '../../../core/src/utils/shell.js';
 import fs from 'node:fs';
 import path from 'node:path';

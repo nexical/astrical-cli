@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import * as git from '../../../utils/git.js';
+import * as git from '../../../src/utils/git.js';
 import * as shell from '../../../core/src/utils/shell.js';
 
 vi.mock('../../../core/src/utils/shell.js');

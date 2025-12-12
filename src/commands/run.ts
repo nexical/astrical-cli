@@ -4,7 +4,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import { spawn } from 'child_process';
 import process from 'node:process';
-import { prepareEnvironment } from '../utils/environment.js';
+import { prepareEnvironment } from '../src/utils/environment.js';
 import { logger } from '../core/src/utils/logger.js';
 
 export default class RunCommand extends BaseCommand {

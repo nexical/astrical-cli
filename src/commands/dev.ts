@@ -6,10 +6,10 @@ import { spawn } from 'child_process';
 import process from 'node:process';
 import { logger } from '../core/src/utils/logger.js';
 
-export default class PreviewCommand extends BaseCommand {
-    static paths = [['preview']];
-    static usage = 'preview';
-    static description = 'Preview the production build locally.';
+export default class DevCommand extends BaseCommand {
+    static paths = [['dev']];
+    static usage = 'dev';
+    static description = 'Starts the Astro development server with HMR.';
     static requiresProject = true;
 
     async run() {
@@ -19,21 +19,24 @@ export default class PreviewCommand extends BaseCommand {
         }
 
         const siteDir = path.resolve(this.projectRoot, '_site');
-        const distDir = path.join(siteDir, 'dist');
 
-        logger.debug('Preview paths:', { siteDir, distDir });
+        this.info('Initializing ephemeral build environment...');
 
-        if (!(await fs.pathExists(distDir))) {
-            this.error("Please run 'astrical build' first.");
+        try {
+            const { prepareEnvironment } = await import('../src/utils/environment.js');
+            logger.debug(`Preparing environment at: ${this.projectRoot}`);
+            await prepareEnvironment(this.projectRoot);
+        } catch (error: any) {
+            this.error(error);
             return;
         }
 
-        this.info('Starting preview server...');
+        this.success('Environment ready. Starting Astro...');
 
         const astroBin = path.join(this.projectRoot, 'node_modules', '.bin', 'astro');
-        logger.debug(`Spawning astro preview from: ${astroBin} in ${siteDir}`);
+        logger.debug(`Spawning astro dev from: ${astroBin} in ${siteDir}`);
 
-        const child = spawn(astroBin, ['preview'], {
+        const child = spawn(astroBin, ['dev'], {
             cwd: siteDir,
             stdio: 'inherit',
             env: {
@@ -43,10 +46,9 @@ export default class PreviewCommand extends BaseCommand {
         });
 
         child.on('error', (err) => {
-            this.error(`Failed to start preview: ${err.message}`);
+            this.error(`Failed to start Astro: ${err.message}`);
         });
 
-        // Handle process termination to kill child
         const cleanup = () => {
             child.kill();
             process.exit();
@@ -57,9 +59,6 @@ export default class PreviewCommand extends BaseCommand {
 
         await new Promise<void>((resolve) => {
             child.on('close', (code) => {
-                if (code !== 0) {
-                    // exit
-                }
                 resolve();
             });
         });

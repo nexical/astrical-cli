@@ -1,6 +1,6 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import ModuleRemoveCommand from '../../../../commands/module/remove.js';
+import ModuleRemoveCommand from '../../../../src/commands/module/remove.js';
 import { logger } from '../../../../core/src/utils/logger.js';
 import * as shell from '../../../../core/src/utils/shell.js';
 import fs from 'fs-extra';

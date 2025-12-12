@@ -1,15 +1,15 @@
 
-import { BaseCommand } from '../core/src/BaseCommand.js';
+import { BaseCommand } from '../../core/src/BaseCommand.js';
 import fs from 'fs-extra';
 import path from 'path';
 import { spawn } from 'child_process';
 import process from 'node:process';
-import { logger } from '../core/src/utils/logger.js';
+import { logger } from '../../core/src/utils/logger.js';
 
-export default class DevCommand extends BaseCommand {
-    static paths = [['dev']];
-    static usage = 'dev';
-    static description = 'Starts the Astro development server with HMR.';
+export default class PreviewCommand extends BaseCommand {
+    static paths = [['preview']];
+    static usage = 'preview';
+    static description = 'Preview the production build locally.';
     static requiresProject = true;
 
     async run() {
@@ -19,24 +19,21 @@ export default class DevCommand extends BaseCommand {
         }
 
         const siteDir = path.resolve(this.projectRoot, '_site');
+        const distDir = path.join(siteDir, 'dist');
 
-        this.info('Initializing ephemeral build environment...');
+        logger.debug('Preview paths:', { siteDir, distDir });
 
-        try {
-            const { prepareEnvironment } = await import('../utils/environment.js');
-            logger.debug(`Preparing environment at: ${this.projectRoot}`);
-            await prepareEnvironment(this.projectRoot);
-        } catch (error: any) {
-            this.error(error);
+        if (!(await fs.pathExists(distDir))) {
+            this.error("Please run 'astrical build' first.");
             return;
         }
 
-        this.success('Environment ready. Starting Astro...');
+        this.info('Starting preview server...');
 
         const astroBin = path.join(this.projectRoot, 'node_modules', '.bin', 'astro');
-        logger.debug(`Spawning astro dev from: ${astroBin} in ${siteDir}`);
+        logger.debug(`Spawning astro preview from: ${astroBin} in ${siteDir}`);
 
-        const child = spawn(astroBin, ['dev'], {
+        const child = spawn(astroBin, ['preview'], {
             cwd: siteDir,
             stdio: 'inherit',
             env: {
@@ -46,9 +43,10 @@ export default class DevCommand extends BaseCommand {
         });
 
         child.on('error', (err) => {
-            this.error(`Failed to start Astro: ${err.message}`);
+            this.error(`Failed to start preview: ${err.message}`);
         });
 
+        // Handle process termination to kill child
         const cleanup = () => {
             child.kill();
             process.exit();
@@ -59,6 +57,9 @@ export default class DevCommand extends BaseCommand {
 
         await new Promise<void>((resolve) => {
             child.on('close', (code) => {
+                if (code !== 0) {
+                    // exit
+                }
                 resolve();
             });
         });

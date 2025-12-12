@@ -16,8 +16,8 @@
     "include": [
         "core/src/**/*",
         "core/test/**/*",
-        "commands/**/*",
-        "utils/**/*",
+        "src/commands/**/*",
+        "src/utils/**/*",
         "test/**/*",
         "index.ts"
     ],

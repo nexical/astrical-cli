@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import ModuleListCommand from '../../../../commands/module/list.js';
+import ModuleListCommand from '../../../../src/commands/module/list.js';
 import { logger } from '../../../../core/src/utils/logger.js';
 import fs from 'fs-extra';
 import path from 'path';

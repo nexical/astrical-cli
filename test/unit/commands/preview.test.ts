@@ -1,6 +1,6 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import PreviewCommand from '../../../commands/preview.js';
+import PreviewCommand from '../../../src/commands/preview.js';
 import { logger } from '../../../core/src/utils/logger.js';
 import fs from 'fs-extra';
 import cp from 'child_process';

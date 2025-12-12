@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, afterAll, vi } from 'vitest';
-import ModuleAddCommand from '../../../commands/module/add.js';
-import ModuleRemoveCommand from '../../../commands/module/remove.js';
-import ModuleListCommand from '../../../commands/module/list.js';
-import ModuleUpdateCommand from '../../../commands/module/update.js';
+import ModuleAddCommand from '../../../src/commands/module/add.js';
+import ModuleRemoveCommand from '../../../src/commands/module/remove.js';
+import ModuleListCommand from '../../../src/commands/module/list.js';
+import ModuleUpdateCommand from '../../../src/commands/module/update.js';
 
 import { createTempDir, createMockRepo, cleanupTestRoot } from '../../utils/integration-helpers.js';
 import path from 'node:path';

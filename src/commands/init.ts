@@ -1,6 +1,6 @@
 import { BaseCommand } from '../core/src/BaseCommand.js';
 import { CommandDefinition } from '../core/src/CommandInterface.js';
-import * as git from '../utils/git.js';
+import * as git from '../src/utils/git.js';
 import { runCommand } from '../core/src/utils/shell.js';
 import fs from 'node:fs';
 import path from 'node:path';

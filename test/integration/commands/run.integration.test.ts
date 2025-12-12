@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, afterAll, vi } from 'vitest';
-import RunCommand from '../../../commands/run.js';
+import RunCommand from '../../../src/commands/run.js';
 import { createTempDir } from '../../utils/integration-helpers.js';
 import path from 'node:path';
 import fs from 'fs-extra';

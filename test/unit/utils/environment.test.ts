@@ -1,6 +1,6 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { prepareEnvironment } from '../../../utils/environment.js';
+import { prepareEnvironment } from '../../../src/utils/environment.js';
 import fs from 'fs-extra';
 import path from 'path';
 

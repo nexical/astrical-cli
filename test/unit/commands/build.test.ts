@@ -1,6 +1,6 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import BuildCommand from '../../../commands/build.js';
+import BuildCommand from '../../../src/commands/build.js';
 import { logger } from '../../../core/src/utils/logger.js';
 import fs from 'fs-extra';
 // import cp from 'child_process';

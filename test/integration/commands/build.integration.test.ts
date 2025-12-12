@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, afterAll, vi } from 'vitest';
-import BuildCommand from '../../../commands/build.js';
+import BuildCommand from '../../../src/commands/build.js';
 import { createTempDir, cleanupTestRoot } from '../../utils/integration-helpers.js';
 import path from 'node:path';
 import fs from 'fs-extra';

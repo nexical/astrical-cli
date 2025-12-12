@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, afterAll, vi } from 'vitest';
-import DevCommand from '../../../commands/dev.js';
-import PreviewCommand from '../../../commands/preview.js';
+import DevCommand from '../../../src/commands/dev.js';
+import PreviewCommand from '../../../src/commands/preview.js';
 import { createTempDir } from '../../utils/integration-helpers.js';
 import path from 'node:path';
 import fs from 'fs-extra';
