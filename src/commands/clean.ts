@@ -7,6 +7,7 @@ import { logger } from '../utils/logger.js';
 export default class CleanCommand extends BaseCommand {
     static paths = [['clean']];
     static usage = 'clean';
+    static description = 'Clean project artifacts and caches.';
 
     async run() {
         // Core cleaning logic

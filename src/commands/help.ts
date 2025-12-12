@@ -2,7 +2,7 @@ import { BaseCommand } from '../core/BaseCommand.js';
 import pc from 'picocolors';
 
 export default class HelpCommand extends BaseCommand {
-    static description = 'Display help for commands';
+    static description = 'Display help for commands.';
 
     static args = {
         args: [

@@ -49,6 +49,8 @@ describe('CLI', () => {
             help: vi.fn(),
             version: vi.fn(),
             parse: vi.fn(),
+            option: vi.fn().mockReturnThis(),
+            outputHelp: vi.fn(),
         };
         (cac as any).mockReturnValue(mockCac);
 
@@ -69,7 +71,7 @@ describe('CLI', () => {
         await cli.start();
 
         expect(mockLoad).toHaveBeenCalled();
-        expect(mockCac.help).toHaveBeenCalled();
+        // expect(mockCac.help).toHaveBeenCalled(); // Default help disabled
         expect(mockCac.version).toHaveBeenCalled();
         expect(mockCac.parse).toHaveBeenCalled();
     });
@@ -77,7 +79,7 @@ describe('CLI', () => {
     it('should enable debug mode if --debug flag is present', async () => {
         const cli = new CLI();
         (fs.existsSync as any).mockReturnValue(true);
-        
+
         const originalArgv = process.argv;
         process.argv = [...originalArgv, '--debug'];
 
@@ -403,7 +405,7 @@ describe('CLI', () => {
 
         // Should register the group root
         expect(mockCac.command).toHaveBeenCalledWith(
-            expect.stringContaining('group <subcommand> [...args]'),
+            expect.stringContaining('group [subcommand] [...args]'),
             expect.anything()
         );
 
@@ -559,6 +561,190 @@ describe('CLI', () => {
         expect(runSpy).toHaveBeenCalledWith(expect.objectContaining({
             r1: 'val1'
         }));
+        expect(runSpy).toHaveBeenCalledWith(expect.objectContaining({
+            r1: 'val1'
+        }));
         // o1 should be undefined
+    });
+
+    it('should intercept --help flag and run HelpCommand', async () => {
+        const cli = new CLI();
+        (fs.existsSync as any).mockReturnValue(true);
+
+        const mockHelpRun = vi.fn();
+        class MockHelpCommand extends BaseCommand {
+            async run(opts: any) { mockHelpRun(opts); }
+        }
+
+        mockLoad.mockResolvedValue([
+            { command: 'help', class: MockHelpCommand, instance: new MockHelpCommand() },
+            { command: 'test', class: MockCommand, instance: new MockCommand() }
+        ]);
+
+        await cli.start();
+
+
+        // 'help' is registered first (index 0), 'test' is second (index 1)
+        const actionFn = mockCommand.action.mock.calls[1][0]; // test command action
+
+        // Call action with help: true options
+        await actionFn({}, { help: true });
+
+        expect(mockHelpRun).toHaveBeenCalledWith({ command: ['test'] });
+    });
+
+    it('should handle help for valid subcommand without crashing', async () => {
+        const cli = new CLI();
+        (fs.existsSync as any).mockReturnValue(true);
+
+        const mockHelpRun = vi.fn();
+        class MockHelpCommand extends BaseCommand {
+            async run(opts: any) { mockHelpRun(opts); }
+        }
+
+        class SubCmd extends BaseCommand { async run() { } }
+
+        mockLoad.mockResolvedValue([
+            { command: 'help', class: MockHelpCommand, instance: new MockHelpCommand() },
+            { command: 'mod sub', class: SubCmd, instance: new SubCmd() }
+        ]);
+
+        await cli.start();
+
+        // Find action for 'mod <subcommand>'
+        // It should be the second registered command after help
+        const actionFn = mockCommand.action.mock.calls[1][0];
+
+        // Call action with subcommand='sub' and help: true
+        await actionFn('sub', [], { help: true });
+
+        expect(mockHelpRun).toHaveBeenCalledWith({ command: ['mod', 'sub'] });
+    });
+
+    it('should handle help for module root (subcommand undefined)', async () => {
+        const cli = new CLI();
+        (fs.existsSync as any).mockReturnValue(true);
+
+        const mockHelpRun = vi.fn();
+        class MockHelpCommand extends BaseCommand {
+            async run(opts: any) { mockHelpRun(opts); }
+        }
+
+        mockLoad.mockResolvedValue([
+            { command: 'help', class: MockHelpCommand, instance: new MockHelpCommand() },
+            { command: 'mod sub', class: MockCommand, instance: new MockCommand() }
+        ]);
+
+        await cli.start();
+        const actionFn = mockCommand.action.mock.calls[1][0];
+
+        // Call action with subcommand=undefined (simulating 'module --help')
+        await actionFn(undefined, [], { help: true });
+
+        // Should call with just ['mod']
+        // Should call with just ['mod']
+        expect(mockHelpRun).toHaveBeenCalledWith({ command: ['mod'] });
+    });
+
+    it('should show help when subcommand is missing (no help flag)', async () => {
+        const cli = new CLI();
+        (fs.existsSync as any).mockReturnValue(true);
+
+        const mockHelpRun = vi.fn();
+        class MockHelpCommand extends BaseCommand {
+            async run(opts: any) { mockHelpRun(opts); }
+        }
+
+        mockLoad.mockResolvedValue([
+            { command: 'help', class: MockHelpCommand, instance: new MockHelpCommand() },
+            { command: 'sys info', class: MockCommand, instance: new MockCommand() }
+        ]);
+
+        await cli.start();
+        const actionFn = mockCommand.action.mock.calls[1][0];
+
+        // Call action with subcommand=undefined and NO help flag
+        await actionFn(undefined, [], {});
+
+        expect(mockHelpRun).toHaveBeenCalledWith({ command: ['sys'] });
+    });
+
+    it('should handle global --help flag with no command', async () => {
+        const cli = new CLI();
+        (fs.existsSync as any).mockReturnValue(true);
+
+        const mockHelpRun = vi.fn();
+        class MockHelpCommand extends BaseCommand {
+            async run(opts: any) { mockHelpRun(opts); }
+        }
+
+        mockLoad.mockResolvedValue([
+            { command: 'help', class: MockHelpCommand, instance: new MockHelpCommand() }
+        ]);
+
+        const originalArgv = process.argv;
+        process.argv = ['node', 'astrical', '--help'];
+
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(((code: any) => {
+            // throw to stop execution flow if needed, but the code calls it at the end
+        }) as any);
+
+        await cli.start();
+
+        expect(mockHelpRun).toHaveBeenCalledWith({ command: [] });
+        expect(exitSpy).toHaveBeenCalledWith(0);
+
+        process.argv = originalArgv;
+    });
+
+    it('should fallback to native help output if HelpCommand is missing', async () => {
+        const cli = new CLI();
+        (fs.existsSync as any).mockReturnValue(true);
+
+        // Load commands but NO help command
+        mockLoad.mockResolvedValue([
+            { command: 'test', class: MockCommand, instance: new MockCommand() }
+        ]);
+
+        await cli.start();
+
+        const actionFn = mockCommand.action.mock.calls[0][0];
+
+        // Access private method to force the fallback path? 
+        // Or just trigger help via action options
+
+        await actionFn({}, { help: true });
+
+
+        expect(mockCac.outputHelp).toHaveBeenCalled();
+    });
+
+    it('should NOT run global help if command args are present with --help', async () => {
+        const cli = new CLI();
+        (fs.existsSync as any).mockReturnValue(true);
+
+        mockLoad.mockResolvedValue([
+            { command: 'test', class: MockCommand, instance: new MockCommand() }
+        ]);
+
+        const mockHelpRun = vi.fn();
+        class MockHelpCommand extends BaseCommand {
+            async run() { mockHelpRun(); }
+        }
+        (cli as any).HelpCommandClass = MockHelpCommand;
+
+        const originalArgv = process.argv;
+        // Simulate: astrical test --help
+        process.argv = ['node', 'astrical', 'test', '--help'];
+
+        await cli.start();
+
+        // Should NOT call global help run
+        expect(mockHelpRun).not.toHaveBeenCalled();
+
+        // Should fall through to parse
+        expect(mockCac.parse).toHaveBeenCalled();
+
+        process.argv = originalArgv;
     });
 });

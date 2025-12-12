@@ -13,6 +13,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export class CLI {
     private cli = cac('astrical');
     private loader = new CommandLoader();
+    private HelpCommandClass: any;
+
+    constructor() {
+        // No default constructor action
+    }
 
     private loadedCommands: any[] = [];
 
@@ -61,6 +66,12 @@ export class CLI {
 
         // Group commands by root command name
         const commandGroups: Record<string, any[]> = {};
+        // Locate HelpCommand for fallback usage
+        const helpCmd = this.loadedCommands.find(c => c.command === 'help');
+        if (helpCmd) {
+            this.HelpCommandClass = helpCmd.class;
+        }
+
         for (const cmd of this.loadedCommands) {
             const root = cmd.command.split(' ')[0];
             if (!commandGroups[root]) commandGroups[root] = [];
@@ -95,6 +106,12 @@ export class CLI {
 
                 cacCommand.action(async (...args: any[]) => {
                     const options = args.pop();
+
+                    if (options.help) {
+                        await this.runHelp([cmd.command]);
+                        return;
+                    }
+
                     const positionalArgs = args;
                     if (argsDef.args) {
                         argsDef.args.forEach((arg: any, index: number) => {
@@ -108,7 +125,7 @@ export class CLI {
             } else {
                 // Case 2: Command with subcommands (e.g. 'module add')
                 // Register 'module <subcommand>' catch-all
-                const commandName = `${root} <subcommand> [...args]`;
+                const commandName = `${root} [subcommand] [...args]`;
                 const cacCommand = this.cli.command(commandName, `Manage ${root} commands`);
 
                 cacCommand.allowUnknownOptions(); // Pass options to subcommand
@@ -116,6 +133,18 @@ export class CLI {
 
                 cacCommand.action(async (subcommand: string, ...args: any[]) => {
                     const options = args.pop(); // last is options
+
+                    if (!subcommand || options.help) {
+                        // If --help is passed to 'module --help', subcommand might be caught as 'module' if args parsing is weird?  
+                        // ACTUALLY: cac parses 'module add --help' as subcommand="add".
+                        // 'module --help' might trigger the command itself? No, 'module <subcommand>' expects a subcommand.
+                        // If I run 'module --help', it might fail validation or parse 'help' as subcommand if unlucky, 
+                        // but likely it just prints help if we didn't override.
+
+                        await this.runHelp([root, subcommand].filter(Boolean));
+                        return;
+                    }
+
 
                     // Find matching command
                     // Match against "root subcommand"
@@ -161,8 +190,29 @@ export class CLI {
                 });
             }
         }
-        this.cli.help();
+        // Disable default help
+        // this.cli.help(); 
+
+        // Manually register global help to ensure it's allowed
+        this.cli.option('--help, -h', 'Display help');
+
         this.cli.version(pkg.version);
+
+        // Global help interception for root command
+        // If we run `astrical --help`, we need to catch it.
+        // CAC doesn't expose a clean global action without a command content.
+        // However, if we parse and no command matches, it usually errors or shows help.
+        // If we have default logic, we can put it here?
+        // Let's rely on standard parsing but maybe inspect raw args first?
+
+        if (process.argv.includes('--help') || process.argv.includes('-h')) {
+            // Inspect non-option args to see if there's a command?
+            const args = process.argv.slice(2).filter(a => !a.startsWith('-'));
+            if (args.length === 0) {
+                await this.runHelp([]);
+                process.exit(0);
+            }
+        }
 
         try {
             this.cli.parse();
@@ -175,6 +225,18 @@ export class CLI {
     private registerGlobalOptions(cacCommand: any) {
         cacCommand.option('--root-dir <path>', 'Override project root');
         cacCommand.option('--debug', 'Enable debug mode');
+        cacCommand.option('--help, -h', 'Display help message');
+    }
+
+    private async runHelp(commandParts: string[]) {
+        if (this.HelpCommandClass) {
+            const helpInstance = new this.HelpCommandClass();
+            helpInstance.setCli(this);
+            await helpInstance.run({ command: commandParts });
+        } else {
+            // Fallback if HelpCommand not loaded (shouldn't happen)
+            this.cli.outputHelp();
+        }
     }
 
     private async runCommand(CommandClass: any, options: any) {

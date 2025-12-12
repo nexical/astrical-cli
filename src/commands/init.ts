@@ -7,7 +7,7 @@ import path from 'node:path';
 import { logger } from '../utils/logger.js';
 
 export default class InitCommand extends BaseCommand {
-    static description = 'Initialize a new Astrical project';
+    static description = 'Initialize a new Astrical project.';
     static args: CommandDefinition = {
         args: [
             { name: 'directory', required: true, description: 'Directory to initialize the project in' }
